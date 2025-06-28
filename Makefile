@@ -31,6 +31,7 @@ OPT=-O3 # Guardar toda la información para poder debugear. No optimiza
 # -Wall    = (Warn All) Da aviso de todos los posibles errores de compilación
 # $(OPT)   = Nivel de optimización
 CFLAGS=-Wunused -Wall $(OPT) -fopenmp
+CSSFLAGS = -Wall $(OPT) - fopenmp -std=c++17
 
 ###############################################################################
 # LIBRERÍAS                                                                   #
@@ -51,8 +52,8 @@ LIB=$(MTH) # $(LDLIBS)
 # COMMON=imagelib
 
 # Directorios que serán compilados a un programa
-PROGRAMS=draw_bw draw_colored draw_j draw_j_bw draw_mmap_f draw_mmap_n draw_multibrot draw_sj
-
+PROGRAMS_C = draw_j draw_j_bw draw_sj
+PROGRAMS_CPP = draw_pslice
 # Todos los directorios que contienen archivos de código
 SRCDIR=$(COMMON) $(PROGRAMS)
 
@@ -69,8 +70,18 @@ HDRFILES := $(shell find $(SRC) -name '*.h')
 # Todos los archivos .c
 SRCFILES := $(shell find $(SRC) -name '*.c')
 
+# Todos los archivos .cpp
+CPPFILES := $(shell find $(SRC) -name '*.cpp')
+
 # Archivos de objeto .o, un estado intermedio de compilación
 OBJFILES := $(foreach i, $(SRCFILES), $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(i)))
+
+# Archivos de objeto (C++) .o, un estado intermedio de compilación
+CPPOBSJ := $(foreach i, $(CPPFILES), $(patsubst $(SRC)/%.cpp, $(OBJ)/%.o, S(i)))
+
+# Unificación de los archivos C y C++
+OBJFILES := $(foreach i, $(SRCFILES), $(patsubst $(SRC)/%.c, $(OBJ)/%.o, $(i))) \
+            $(foreach i, $(CPPFILES), $(patsubst $(SRC)/%.cpp, $(OBJ)/%.o, $(i)))
 
 # Los directorios para los archivos de objeto .o
 OBJDIR := $(patsubst $(SRC)/%, $(OBJ)/%, $(shell find $(SRC) -type d))
@@ -120,12 +131,39 @@ LOCAL_DEPS = $(filter $(patsubst $(OBJ)/%, $(SRC)/%, $(dir $(1)))%, $(HDRFILES))
 obj/%.o: src/%.c $$(call LOCAL_DEPS,$$@) $(DEPS) Makefile
 	@$(CC) $(CFLAGS) $< -c -o $@ $(LIB) && echo "compiled '$@'"
 
+obj/%.o: src/%.cpp $$(call LOCAL_DEPS,$$@) $(DEPS) Makefile
+	@$(CXX) $(CXXFLAGS) $< -c -o $@ $(LIB) && echo "compiled '$@'"
+
 # Esta regla conecta y compila cada programa a partir de los .o
 # Pero solo una vez que se haya llamado la regla anterior con lo siguiente
 ## todos los .o de la carpeta respectiva del programa
 ## todos los .o de los directorios comunes
-$(PROGRAMS): $$(filter obj/$$@/% $(foreach i, $(COMMON), obj/$(i)/%), $(OBJFILES))
+$(PROGRAMS_C): $$(filter obj/$$@/% $(foreach i, $(COMMON), obj/$(i)/%), $(OBJFILES))
 	@$(CC) $(CFLAGS) $^ -o $@ $(LIB) && echo "compiled '$@'"
+$(PROGRAMS_CPP): $$(filter obj/$$@/% $(foreach i, $(COMMON), obj/$(i)/%), $(OBJFILES))
+	@$(CXX) $(CXXFLAGS) $^ -o $@ $(LIB) && echo "compiled '$@'"
+
+# Compilar archivos C (en subdirectorios)
+$(OBJ)/%.o: $(SRC)/%.c
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+# Compilar archivos C++
+$(OBJ)/%.o: $(SRC)/%.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+#draw_j: $(OBJ)/draw_j/main.o $(OBJ)/draw_j/utils.o
+#	@$(CC) $(CFLAGS) $^ -o $@ $(LIB) && echo "compiled '$@'"
+
+#draw_sj: $(OBJ)/draw_sj/main.o $(OBJ)/draw_sj/helpers.o
+#	@$(CC) $(CFLAGS) $^ -o $@ $(LIB) && echo "compiled '$@'"
+
+#draw_j_bw: $(OBJ)/draw_j_bw/main.o $(OBJ)/draw_j_bw/utils.o
+#	@$(CC) $(CFLAGS) $^ -o $@ $(LIB) && echo "compiled '$@'"
+
+#draw_pslice: $(OBJ)/draw_pslice/main.o $(OBJ)/draw_pslice/helpers.o
+#	@$(CXX) $(CXXFLAGS) $^ -o $@ $(LIB) && echo "compiled '$@'"
 
 ###############################################################################
 #                   Cualquier duda no temas en preguntar!                     #

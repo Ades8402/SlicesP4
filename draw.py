@@ -408,7 +408,7 @@ julia_rect = 0
 ###
 
 # Methods of drawing
-method_draw_tric = ["./draw_mmap_n", "./draw_mmap_f", "./draw_bw", "./draw_colored"] # Types of drawing for the tricorn
+method_draw_tric = ["./draw_pslice"] # Types of drawing for the slice
 T = 0
 NAME_TRICORN_IMAGE = "./img/tricorn.ppm"
 method_draw_julia = ["./draw_j", "./draw_j_bw", "./draw_sj"] # Types of drawing for the tricorn
